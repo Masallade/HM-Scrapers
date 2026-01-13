@@ -13,7 +13,26 @@ Automated web scraper for hotel pricing data from Choice MAX platform, integrate
 pip3 install -r requirements.txt
 ```
 
-### 2. Test Database Connection
+### 2. Set Up Google Cloud Credentials
+
+The project uses Google Cloud Service Account credentials for accessing Google Sheets. You have three options:
+
+**Option A: Environment Variable (Recommended)**
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS_JSON='{"type":"service_account",...}'
+```
+
+**Option B: Credentials File Path**
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/credentials.json"
+```
+
+**Option C: Default Location**
+Place your `credentials.json` file in the project root directory.
+
+**Note:** See `credentials.json.example` for the expected format. Never commit actual credentials to the repository.
+
+### 3. Test Database Connection
 ```bash
 python3 test_db_connection.py
 ```
