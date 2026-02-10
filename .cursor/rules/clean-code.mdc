@@ -1,0 +1,63 @@
+---
+alwaysApply: true
+
+---
+Clean Code Development Guidelines
+
+While writing or updating the code, ensure that clean coding and industrial-level best practices are strictly followed.
+
+Code Structure & Quality
+
+The code should be clean, readable, maintainable, and scalable.
+
+Follow industry-standard naming conventions for variables, functions, classes, and files.
+
+Keep functions and modules small and focused on a single responsibility.
+
+Avoid tightly coupled logic; ensure the code is easy to extend and refactor.
+
+Functional & Modular Approach
+
+Use a functional approach where applicable:
+
+Each function should perform one clear task.
+
+Functions should be reusable and testable.
+
+Apply a modular architecture:
+
+Break the logic into independent modules/files.
+
+Each module should handle a specific concern or feature.
+
+Modules should communicate through well-defined interfaces.
+
+Commenting & Documentation
+
+Add a paragraph-level comment at the top of each file explaining:
+
+The purpose of the file
+
+The problem it solves
+
+Its role within the overall system
+
+Add clear and meaningful comments throughout the code, explaining:
+
+What each block or line of code does
+
+The intention behind complex logic
+
+Comments should be written in simple and professional language, making the code easy to understand for new and future developers.
+
+General Best Practices
+
+Treat the code as production-ready, not temporary or experimental.
+
+Follow DRY (Don’t Repeat Yourself) and SOLID principles where applicable.
+
+Ensure consistency in formatting, spacing, and structure.
+
+The code should be self-explanatory, with comments enhancing clarity rather than compensating for poor structure.
+
+Also comments on every single line for better understanding, and where you update the code or add the code please add a comment paragraph of the below code purpose.

@@ -86,14 +86,18 @@ def get_property_details(property_id):
             pch.physical_capacity,
             pch.out_of_order
         FROM properties p
-        LEFT JOIN properties_characteristics_history pch 
-            ON p.id = pch.property_id 
-            AND pch.record_date = CURDATE()
+        LEFT JOIN (
+            SELECT property_id, saleable_rooms, physical_capacity, out_of_order
+            FROM properties_characteristics_history
+            WHERE property_id = %s
+            ORDER BY record_date DESC
+            LIMIT 1
+        ) pch ON p.id = pch.property_id
         WHERE p.id = %s
     """
     
     try:
-        cursor.execute(query, (property_id,))
+        cursor.execute(query, (property_id, property_id))
         property_data = cursor.fetchone()
         return property_data
     except Error as e:
@@ -289,14 +293,32 @@ def save_pricing_data(run_id, property_id, scraped_data_list):
             previous_standard_price = get_previous_standard_price(property_id, record_date)
             
             # Calculate standard_price_change (absolute: current - previous)
+            # Convert both to float to avoid type mismatch (Decimal vs float)
             standard_price_change = None
             if current_price is not None and previous_standard_price is not None:
-                standard_price_change = current_price - previous_standard_price
+                try:
+                    current_price_float = float(current_price) if current_price is not None else None
+                    previous_price_float = float(previous_standard_price) if previous_standard_price is not None else None
+                    if current_price_float is not None and previous_price_float is not None:
+                        standard_price_change = current_price_float - previous_price_float
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Error calculating standard_price_change: {e}")
+                    standard_price_change = None
             
             # Occupancy data
             occ_books_val, occ_books_pct = parse_occupancy(data.get('Occ. on Books'))
             occ_forecast_val, occ_forecast_pct = parse_occupancy(data.get('Occ. Forecast'))
             occ_ly_val, occ_ly_pct = parse_occupancy(data.get('Occ. LY'))
+            
+            # Debug: Log occupancy values for first record
+            if record_date and 'Jan 15' in str(data.get('Date Only', '')):
+                logger.info(f"DEBUG - Occupancy data for {record_date}:")
+                logger.info(f"  Raw 'Occ. on Books': {data.get('Occ. on Books')}")
+                logger.info(f"  Parsed occ_books: val={occ_books_val}, pct={occ_books_pct}")
+                logger.info(f"  Raw 'Occ. Forecast': {data.get('Occ. Forecast')}")
+                logger.info(f"  Parsed occ_forecast: val={occ_forecast_val}, pct={occ_forecast_pct}")
+                logger.info(f"  Arrivals: {data.get('Arrivals')}")
+                logger.info(f"  Departures: {data.get('Departures')}")
             
             # Revenue data
             adr = parse_price(data.get('ADR'))

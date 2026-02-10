@@ -2,6 +2,7 @@ selenium>=4.0.0
 webdriver-manager>=3.8.0
 selenium-stealth>=1.0.6
 pandas>=1.5.0
+openpyxl>=3.0.0
 mysql-connector-python>=8.0.33
 gspread>=5.7.0
 gspread-dataframe>=3.3.0
