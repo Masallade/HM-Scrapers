@@ -280,6 +280,36 @@ def login_to_choice_max(driver, username, password, verification_type="PN"):
                 logger.info("   Please approve the notification on your device...")
                 print("\n⏳ Waiting for you to approve the push notification on your device...")
                 time.sleep(2)
+                
+                # Try to capture the verification number displayed on screen
+                try:
+                    # Look for the number challenge element
+                    number_elements = driver.find_elements(By.CSS_SELECTOR, "div.beacon-container span.data-se")
+                    if not number_elements:
+                        number_elements = driver.find_elements(By.CSS_SELECTOR, "span[data-se='number-challenge']")
+                    if not number_elements:
+                        number_elements = driver.find_elements(By.CSS_SELECTOR, "div.okta-verify-number")
+                    if not number_elements:
+                        # Try to find any large number on the page
+                        number_elements = driver.find_elements(By.XPATH, "//span[string-length(text())<=3 and string-length(text())>=1]")
+                    
+                    if number_elements:
+                        for elem in number_elements:
+                            text = elem.text.strip()
+                            if text and text.isdigit():
+                                print("\n" + "="*60)
+                                print(f"🔢 VERIFICATION NUMBER: {text}")
+                                print("="*60)
+                                print(f"Please select number {text} on your device to approve")
+                                print("="*60 + "\n")
+                                logger.info(f"Verification number displayed: {text}")
+                                break
+                    else:
+                        logger.info("Could not find verification number on page")
+                        
+                except Exception as e:
+                    logger.debug(f"Could not extract verification number: {e}")
+                
                 driver.save_screenshot(f'{ChoiceConfig.DOWNLOAD_DIR}mfa_push_notification.png')
             else:
                 logger.info("Looking for OTP option...")
