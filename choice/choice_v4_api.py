@@ -97,11 +97,13 @@ def create_browser():
     chrome_options.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
     
     # Browser options
-    chrome_options.add_argument("--start-maximized")
-    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    chrome_options.add_argument("--disable-notifications")
+    chrome_options.add_argument("--headless=new")  # Run in headless mode
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_argument("--disable-notifications")
+    chrome_options.add_argument("--window-size=1920,1080")
     
     # User agent
     user_agent = (
@@ -540,13 +542,9 @@ def main():
         
         # Login
         print(f"\n🔐 Logging in to Choice MAX as {username}...")
+        print("Using Push Notification (PN) for MFA verification...")
         
-        print("\nMFA Verification Method:")
-        print("  PN - Push Notification (recommended)")
-        print("  OTP - One-Time Password")
-        verification_type = input("Enter verification type (PN/OTP) [default: PN]: ").strip().upper()
-        if not verification_type:
-            verification_type = "PN"
+        verification_type = "PN"
         
         login_success = login_to_choice_max(driver, username, password, verification_type)
         
@@ -567,7 +565,7 @@ def main():
             return
         
         # Save JSON
-        output_file = "/Users/apple/python/hm_scrapers/choice/new_record_json.json"
+        output_file = os.path.join(os.path.dirname(__file__), "new_record_json.json")
         print(f"\n💾 Saving JSON response to: {output_file}")
         
         success = save_json_response(json_data, output_file)
