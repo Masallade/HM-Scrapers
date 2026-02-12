@@ -279,36 +279,71 @@ def login_to_choice_max(driver, username, password, verification_type="PN"):
                 logger.info("⏳ Awaiting MFA confirmation via push notification...")
                 logger.info("   Please approve the notification on your device...")
                 print("\n⏳ Waiting for you to approve the push notification on your device...")
-                time.sleep(2)
                 
-                # Try to capture the verification number displayed on screen
-                try:
-                    # Look for the number challenge element
-                    number_elements = driver.find_elements(By.CSS_SELECTOR, "div.beacon-container span.data-se")
-                    if not number_elements:
-                        number_elements = driver.find_elements(By.CSS_SELECTOR, "span[data-se='number-challenge']")
-                    if not number_elements:
-                        number_elements = driver.find_elements(By.CSS_SELECTOR, "div.okta-verify-number")
-                    if not number_elements:
-                        # Try to find any large number on the page
-                        number_elements = driver.find_elements(By.XPATH, "//span[string-length(text())<=3 and string-length(text())>=1]")
+                # Wait longer for the number to appear and try multiple times
+                verification_number = None
+                max_attempts = 10
+                
+                for attempt in range(max_attempts):
+                    time.sleep(1)
                     
-                    if number_elements:
-                        for elem in number_elements:
-                            text = elem.text.strip()
-                            if text and text.isdigit():
-                                print("\n" + "="*60)
-                                print(f"🔢 VERIFICATION NUMBER: {text}")
-                                print("="*60)
-                                print(f"Please select number {text} on your device to approve")
-                                print("="*60 + "\n")
-                                logger.info(f"Verification number displayed: {text}")
-                                break
-                    else:
-                        logger.info("Could not find verification number on page")
+                    try:
+                        # Get page source and look for numbers
+                        page_source = driver.page_source
                         
-                except Exception as e:
-                    logger.debug(f"Could not extract verification number: {e}")
+                        # Try multiple selectors
+                        selectors = [
+                            "div.beacon-container span",
+                            "span[data-se='number-challenge']",
+                            "div.okta-verify-number",
+                            "div.mfa-verify-number",
+                            "span.number-challenge",
+                            "div[class*='number']",
+                            "span[class*='challenge']"
+                        ]
+                        
+                        for selector in selectors:
+                            try:
+                                elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                                for elem in elements:
+                                    text = elem.text.strip()
+                                    if text and text.isdigit() and len(text) <= 3:
+                                        verification_number = text
+                                        break
+                                if verification_number:
+                                    break
+                            except:
+                                continue
+                        
+                        # If still not found, search page source for number patterns
+                        if not verification_number:
+                            import re
+                            # Look for patterns like "number is 42" or just standalone numbers
+                            matches = re.findall(r'\b(\d{1,3})\b', page_source)
+                            for match in matches:
+                                if 0 < int(match) < 100:  # Reasonable range for verification codes
+                                    verification_number = match
+                                    break
+                        
+                        if verification_number:
+                            print("\n" + "="*60)
+                            print(f"🔢 VERIFICATION NUMBER: {verification_number}")
+                            print("="*60)
+                            print(f"Please select number {verification_number} on your device to approve")
+                            print("="*60 + "\n")
+                            logger.info(f"✅ Verification number found: {verification_number}")
+                            break
+                        else:
+                            logger.debug(f"Attempt {attempt + 1}/{max_attempts}: Number not found yet...")
+                            
+                    except Exception as e:
+                        logger.debug(f"Attempt {attempt + 1} error: {e}")
+                        continue
+                
+                if not verification_number:
+                    logger.warning("⚠️ Could not extract verification number from page")
+                    print("\n⚠️ Could not find verification number automatically")
+                    print("Please check your device for the number to select\n")
                 
                 driver.save_screenshot(f'{ChoiceConfig.DOWNLOAD_DIR}mfa_push_notification.png')
             else:
