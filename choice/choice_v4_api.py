@@ -278,28 +278,33 @@ def login_to_choice_max(driver, username, password, verification_type="PN"):
                 
                 logger.info("⏳ Awaiting MFA confirmation via push notification...")
                 logger.info("   Please approve the notification on your device...")
-                print("\n⏳ Waiting for you to approve the push notification on your device...")
+                print("\n⏳ Looking for verification number on screen...")
                 
                 # Wait longer for the number to appear and try multiple times
                 verification_number = None
-                max_attempts = 10
+                max_attempts = 15
+                time.sleep(3)  # Initial wait for page to load
+                
+                # Save screenshot early for debugging
+                driver.save_screenshot(f'{ChoiceConfig.DOWNLOAD_DIR}mfa_number_page.png')
+                logger.info(f"Screenshot saved to: {ChoiceConfig.DOWNLOAD_DIR}mfa_number_page.png")
                 
                 for attempt in range(max_attempts):
-                    time.sleep(1)
-                    
                     try:
                         # Get page source and look for numbers
                         page_source = driver.page_source
                         
                         # Try multiple selectors
                         selectors = [
+                            "div.beacon-container",
                             "div.beacon-container span",
                             "span[data-se='number-challenge']",
                             "div.okta-verify-number",
                             "div.mfa-verify-number",
                             "span.number-challenge",
                             "div[class*='number']",
-                            "span[class*='challenge']"
+                            "span[class*='challenge']",
+                            "[data-se*='number']"
                         ]
                         
                         for selector in selectors:
@@ -315,13 +320,33 @@ def login_to_choice_max(driver, username, password, verification_type="PN"):
                             except:
                                 continue
                         
+                        # Try finding large visible numbers
+                        if not verification_number:
+                            try:
+                                all_elements = driver.find_elements(By.XPATH, "//*[string-length(text()) <= 3]")
+                                for elem in all_elements:
+                                    try:
+                                        text = elem.text.strip()
+                                        if text.isdigit() and elem.is_displayed():
+                                            font_size = elem.value_of_css_property('font-size')
+                                            if font_size and 'px' in font_size:
+                                                size = int(font_size.replace('px', ''))
+                                                if size > 20:  # Large font
+                                                    verification_number = text
+                                                    break
+                                    except:
+                                        continue
+                            except:
+                                pass
+                        
                         # If still not found, search page source for number patterns
                         if not verification_number:
                             import re
                             # Look for patterns like "number is 42" or just standalone numbers
-                            matches = re.findall(r'\b(\d{1,3})\b', page_source)
+                            matches = re.findall(r'\b(\d{1,2})\b', page_source)
                             for match in matches:
-                                if 0 < int(match) < 100:  # Reasonable range for verification codes
+                                num = int(match)
+                                if 1 <= num <= 99:  # Reasonable range for verification codes
                                     verification_number = match
                                     break
                         
@@ -329,23 +354,27 @@ def login_to_choice_max(driver, username, password, verification_type="PN"):
                             print("\n" + "="*60)
                             print(f"🔢 VERIFICATION NUMBER: {verification_number}")
                             print("="*60)
-                            print(f"Please select number {verification_number} on your device to approve")
+                            print(f"SELECT NUMBER {verification_number} ON YOUR PHONE/DEVICE")
                             print("="*60 + "\n")
                             logger.info(f"✅ Verification number found: {verification_number}")
                             break
                         else:
-                            logger.debug(f"Attempt {attempt + 1}/{max_attempts}: Number not found yet...")
+                            if attempt % 3 == 0:
+                                logger.debug(f"Attempt {attempt + 1}/{max_attempts}: Number not found yet...")
+                            time.sleep(1)
                             
                     except Exception as e:
                         logger.debug(f"Attempt {attempt + 1} error: {e}")
+                        time.sleep(1)
                         continue
                 
                 if not verification_number:
                     logger.warning("⚠️ Could not extract verification number from page")
                     print("\n⚠️ Could not find verification number automatically")
-                    print("Please check your device for the number to select\n")
+                    print(f"Check screenshot: {ChoiceConfig.DOWNLOAD_DIR}mfa_number_page.png")
+                    print("Or manually check your device for the correct number\n")
                 
-                driver.save_screenshot(f'{ChoiceConfig.DOWNLOAD_DIR}mfa_push_notification.png')
+                print("⏳ Waiting for you to approve on your device...\n")
             else:
                 logger.info("Looking for OTP option...")
                 otp_option = WebDriverWait(driver, 10).until(
