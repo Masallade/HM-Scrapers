@@ -224,13 +224,61 @@ def login_to_choice_max(driver, username, password, verification_type="PN"):
         try:
             if verification_type == "PN":
                 logger.info("Looking for Push Notification option...")
-                push_notification = WebDriverWait(driver, 15).until(
-                    EC.element_to_be_clickable((By.CSS_SELECTOR, "a[aria-label*='push notification']"))
-                )
-                push_notification.click()
-                logger.info("✅ Push notification selected")
+                
+                # First, check if there are multiple push notification options
+                try:
+                    push_options = driver.find_elements(By.CSS_SELECTOR, "a[aria-label*='push notification']")
+                    
+                    if len(push_options) > 1:
+                        # Multiple options found - display them
+                        print("\n" + "="*60)
+                        print("MULTIPLE PUSH NOTIFICATION OPTIONS FOUND:")
+                        print("="*60)
+                        for idx, option in enumerate(push_options, 1):
+                            aria_label = option.get_attribute('aria-label')
+                            print(f"  {idx}. {aria_label}")
+                        print("="*60)
+                        
+                        # Ask user to select
+                        while True:
+                            try:
+                                choice = input(f"Select option (1-{len(push_options)}): ").strip()
+                                choice_idx = int(choice) - 1
+                                if 0 <= choice_idx < len(push_options):
+                                    selected_option = push_options[choice_idx]
+                                    break
+                                else:
+                                    print(f"Please enter a number between 1 and {len(push_options)}")
+                            except ValueError:
+                                print("Please enter a valid number")
+                        
+                        # Click the selected option
+                        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", selected_option)
+                        time.sleep(0.5)
+                        selected_option.click()
+                        logger.info(f"✅ Selected push notification option {choice}")
+                        
+                    elif len(push_options) == 1:
+                        # Only one option - click it automatically
+                        push_notification = push_options[0]
+                        aria_label = push_notification.get_attribute('aria-label')
+                        print(f"\n📱 Using push notification: {aria_label}")
+                        push_notification.click()
+                        logger.info("✅ Push notification selected")
+                    else:
+                        # No push notification found
+                        logger.error("❌ No push notification options found")
+                        driver.save_screenshot(f'{ChoiceConfig.DOWNLOAD_DIR}no_push_options.png')
+                        return False
+                    
+                except Exception as e:
+                    logger.error(f"❌ Error finding push notification options: {e}")
+                    driver.save_screenshot(f'{ChoiceConfig.DOWNLOAD_DIR}push_options_error.png')
+                    return False
+                
                 logger.info("⏳ Awaiting MFA confirmation via push notification...")
                 logger.info("   Please approve the notification on your device...")
+                print("\n⏳ Waiting for you to approve the push notification on your device...")
                 time.sleep(2)
                 driver.save_screenshot(f'{ChoiceConfig.DOWNLOAD_DIR}mfa_push_notification.png')
             else:
