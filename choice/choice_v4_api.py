@@ -544,7 +544,7 @@ def main():
         print(f"\n🔐 Logging in to Choice MAX as {username}...")
         print("Using Push Notification (PN) for MFA verification...")
         
-        verification_type = "PN"
+        verification_type = "OTP"
         
         login_success = login_to_choice_max(driver, username, password, verification_type)
         
